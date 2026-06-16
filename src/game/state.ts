@@ -35,6 +35,7 @@ export function createGameState(): GameState {
     maxWater: 5,
     coins: 0,
     lastWaterRefill: Date.now(),
+    encyclopediaOpen: false,
   };
 }
 
@@ -158,6 +159,10 @@ export function witherPlot(state: GameState, plotId: string): GameState {
   });
 
   return { ...state, plots: newPlots, coins: state.coins + reward };
+}
+
+export function setEncyclopediaOpen(state: GameState, open: boolean): GameState {
+  return { ...state, encyclopediaOpen: open };
 }
 
 export function setTool(state: GameState, tool: string | null): GameState {

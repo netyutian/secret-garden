@@ -39,6 +39,7 @@ export interface GameState {
   maxWater: number;
   coins: number;
   lastWaterRefill: number;
+  encyclopediaOpen: boolean;
 }
 
 export type Tool = 'hoe' | 'water' | 'seed' | 'shovel' | 'hand';

@@ -1,4 +1,4 @@
-import { createGameState, refillWater } from './game/state';
+import { createGameState, refillWater, setEncyclopediaOpen } from './game/state';
 import { GameState } from './game/types';
 import { renderGarden, updateGarden } from './ui/garden-view';
 import { renderEncyclopedia, updateEncyclopedia } from './ui/encyclopedia';
@@ -12,9 +12,18 @@ if (!app) throw new Error('Missing #app element');
 let state = createGameState();
 
 const gardenView = renderGarden(state, handleChange);
-let encyclopedia = renderEncyclopedia(state);
+let encyclopedia = renderEncyclopedia(state, handleChange);
 let toolbar = renderToolbar(state, handleChange);
 let statusBar = renderStatusBar(state);
+
+// Encyclopedia toggle button
+const encyclopediaBtn = document.createElement('button');
+encyclopediaBtn.className = 'encyclopedia-btn';
+encyclopediaBtn.textContent = '🌸';
+encyclopediaBtn.title = '花之图鉴';
+encyclopediaBtn.addEventListener('click', () => {
+  handleChange(setEncyclopediaOpen(state, !state.encyclopediaOpen));
+});
 
 // BGM toggle button
 const bgmBtn = document.createElement('button');
@@ -35,6 +44,7 @@ bgmBtn.addEventListener('click', () => {
 });
 
 app.appendChild(statusBar);
+app.appendChild(encyclopediaBtn);
 app.appendChild(gardenView);
 app.appendChild(encyclopedia);
 app.appendChild(toolbar);
@@ -43,7 +53,7 @@ app.appendChild(bgmBtn);
 function handleChange(next: GameState) {
   state = next;
   updateGarden(gardenView, state, handleChange);
-  encyclopedia = updateEncyclopedia(encyclopedia, state);
+  encyclopedia = updateEncyclopedia(encyclopedia, state, handleChange);
   toolbar = updateToolbar(toolbar, state, handleChange);
   statusBar = updateStatusBar(statusBar, state);
 }

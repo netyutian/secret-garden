@@ -223,16 +223,31 @@ html, body {
 
 .menu-btn .icon { font-size: 18px; }
 
-/* Encyclopedia Panel */
-.encyclopedia {
+/* Encyclopedia */
+.encyclopedia-container {
   position: absolute;
-  right: 16px; top: 16px; bottom: 16px;
+  right: 16px;
+  top: 16px;
+  bottom: 16px;
   width: 280px;
+  z-index: 50;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.encyclopedia-container.hidden {
+  transform: translateX(120%);
+  opacity: 0;
+  pointer-events: none;
+}
+
+.encyclopedia {
+  width: 100%;
+  height: 100%;
   background: var(--color-panel);
   border-radius: 16px;
   box-shadow: var(--shadow-soft);
-  display: flex; flex-direction: column;
-  z-index: 50;
+  display: flex;
+  flex-direction: column;
   overflow: hidden;
 }
 
@@ -407,6 +422,29 @@ html, body {
 .bgm-btn:hover { transform: scale(1.1); }
 .bgm-btn.playing { background: var(--color-accent); color: white; }
 
+/* Encyclopedia Toggle Button */
+.encyclopedia-btn {
+  position: absolute;
+  right: 64px;
+  top: 16px;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: none;
+  background: var(--color-panel);
+  box-shadow: var(--shadow-soft);
+  cursor: pointer;
+  font-size: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.1s ease, background 0.2s ease;
+  z-index: 50;
+}
+
+.encyclopedia-btn:hover { transform: scale(1.1); }
+.encyclopedia-btn.active { background: var(--color-accent); color: white; }
+
 /* Responsive */
 @media (max-width: 768px) {
   .encyclopedia { width: 200px; right: 8px; top: 8px; bottom: 8px; }
@@ -419,6 +457,8 @@ html, body {
   .status-bar { left: 8px; top: 8px; }
   .status-item { padding: 6px 10px; font-size: 16px; }
   .bgm-btn { width: 44px; height: 44px; font-size: 20px; right: 8px; top: 8px; }
+  .encyclopedia-btn { width: 44px; height: 44px; font-size: 22px; right: 60px; top: 8px; }
+  .encyclopedia-container { width: 240px; right: 8px; top: 8px; bottom: 8px; }
 }
 
 @media (max-width: 480px) {

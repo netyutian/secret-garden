@@ -1,7 +1,11 @@
 import { GameState } from '../game/types';
 import { FLOWERS } from '../data/flowers';
 
-export function renderEncyclopedia(state: GameState): HTMLElement {
+export function renderEncyclopedia(state: GameState, onChange: (s: GameState) => void): HTMLElement {
+  const container = document.createElement('div');
+  container.className = 'encyclopedia-container';
+  if (!state.encyclopediaOpen) container.classList.add('hidden');
+
   const panel = document.createElement('div');
   panel.className = 'encyclopedia';
 
@@ -51,11 +55,12 @@ export function renderEncyclopedia(state: GameState): HTMLElement {
   });
 
   panel.appendChild(list);
-  return panel;
+  container.appendChild(panel);
+  return container;
 }
 
-export function updateEncyclopedia(panel: HTMLElement, state: GameState): HTMLElement {
-  const newPanel = renderEncyclopedia(state);
-  panel.replaceWith(newPanel);
-  return newPanel;
+export function updateEncyclopedia(container: HTMLElement, state: GameState, onChange: (s: GameState) => void): HTMLElement {
+  const newContainer = renderEncyclopedia(state, onChange);
+  container.replaceWith(newContainer);
+  return newContainer;
 }
