@@ -16,6 +16,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '阳光下的微笑，最基础的花园居民。',
+    unlockCost: 0,
+    bloomReward: 5,
   },
   {
     id: 'rose',
@@ -32,6 +34,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '带刺的美丽，需要耐心呵护。',
+    unlockCost: 10,
+    bloomReward: 10,
   },
   {
     id: 'tulip',
@@ -48,6 +52,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '春天的使者，色彩饱满。',
+    unlockCost: 10,
+    bloomReward: 10,
   },
   {
     id: 'sunflower',
@@ -64,6 +70,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '永远追逐阳光，花盘硕大。',
+    unlockCost: 10,
+    bloomReward: 10,
   },
   {
     id: 'lavender',
@@ -80,6 +88,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '紫色的梦，散发着宁静香气。',
+    unlockCost: 15,
+    bloomReward: 15,
   },
   {
     id: 'cherry_blossom',
@@ -96,6 +106,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '转瞬即逝的美丽，令人怜惜。',
+    unlockCost: 15,
+    bloomReward: 15,
   },
   {
     id: 'lotus',
@@ -112,6 +124,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '出淤泥而不染，需要水源附近。',
+    unlockCost: 15,
+    bloomReward: 15,
   },
   {
     id: 'hibiscus',
@@ -128,6 +142,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '热带风情，色彩炽烈。',
+    unlockCost: 10,
+    bloomReward: 10,
   },
   {
     id: 'dandelion',
@@ -144,6 +160,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '随风而去，带来新的希望。',
+    unlockCost: 0,
+    bloomReward: 5,
   },
   {
     id: 'carnation',
@@ -160,6 +178,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '温柔的祝福，花期长久。',
+    unlockCost: 10,
+    bloomReward: 10,
   },
   {
     id: 'orchid',
@@ -176,6 +196,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '高雅孤傲，需要精心照料。',
+    unlockCost: 25,
+    bloomReward: 25,
   },
   {
     id: 'marigold',
@@ -192,6 +214,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '金色的太阳碎片，生命力顽强。',
+    unlockCost: 0,
+    bloomReward: 5,
   },
   {
     id: 'poppy',
@@ -208,6 +232,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '鲜红如血，短暂而绚烂。',
+    unlockCost: 10,
+    bloomReward: 10,
   },
   {
     id: 'jasmine',
@@ -224,6 +250,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '清香袭人，夜晚更加芬芳。',
+    unlockCost: 10,
+    bloomReward: 10,
   },
   {
     id: 'peony',
@@ -240,6 +268,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '花中之王，雍容华贵。',
+    unlockCost: 25,
+    bloomReward: 25,
   },
   {
     id: 'forget_me_not',
@@ -256,6 +286,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '蓝色的记忆，永恒不变。',
+    unlockCost: 15,
+    bloomReward: 15,
   },
   {
     id: 'lily',
@@ -272,6 +304,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '纯洁无瑕，香气清远。',
+    unlockCost: 15,
+    bloomReward: 15,
   },
   {
     id: 'cactus_flower',
@@ -288,6 +322,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '荒漠中的奇迹，罕见而珍贵。',
+    unlockCost: 30,
+    bloomReward: 30,
   },
   {
     id: 'morning_glory',
@@ -304,6 +340,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '清晨开放，午后闭合。',
+    unlockCost: 10,
+    bloomReward: 10,
   },
   {
     id: 'chrysanthemum',
@@ -320,6 +358,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '秋日傲霜，品种繁多。',
+    unlockCost: 10,
+    bloomReward: 10,
   },
   {
     id: 'violet',
@@ -336,6 +376,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '低调优雅，藏在叶间。',
+    unlockCost: 15,
+    bloomReward: 15,
   },
   {
     id: 'bluebell',
@@ -352,6 +394,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '如风铃般摇曳，清脆悦耳。',
+    unlockCost: 15,
+    bloomReward: 15,
   },
   {
     id: 'snowdrop',
@@ -368,6 +412,8 @@ export const FLOWERS: FlowerDef[] = [
       withered: '🥀',
     },
     description: '寒冬中的第一抹白。',
+    unlockCost: 15,
+    bloomReward: 15,
   },
 ];
 

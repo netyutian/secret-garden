@@ -14,6 +14,7 @@ export interface Plot {
   state: PlotState;
   flowerId: string | null;
   plantedAt: number | null;
+  locked: boolean;
 }
 
 export interface FlowerDef {
@@ -23,6 +24,8 @@ export interface FlowerDef {
   color: string;
   stageEmojis: Record<PlotState, string>;
   description: string;
+  unlockCost: number;
+  bloomReward: number;
 }
 
 export interface GameState {
@@ -32,6 +35,10 @@ export interface GameState {
   activeTool: Tool | null;
   sceneOffset: { x: number; y: number };
   zoom: number;
+  water: number;
+  maxWater: number;
+  coins: number;
+  lastWaterRefill: number;
 }
 
 export type Tool = 'hoe' | 'water' | 'seed' | 'shovel' | 'hand';

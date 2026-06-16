@@ -1,4 +1,5 @@
-import { GameState, Plot, PlotState } from './types';
+import { GameState, Plot, PlotState, Tool } from './types';
+import { FLOWER_MAP } from '../data/flowers';
 
 const COLS = 6;
 const ROWS = 6;
@@ -7,6 +8,7 @@ function createPlots(): Plot[] {
   const plots: Plot[] = [];
   for (let y = 0; y < ROWS; y++) {
     for (let x = 0; x < COLS; x++) {
+      const isLocked = x > 1 || y > 1;
       plots.push({
         id: `${x}-${y}`,
         x,
@@ -14,6 +16,7 @@ function createPlots(): Plot[] {
         state: 'wild',
         flowerId: null,
         plantedAt: null,
+        locked: isLocked,
       });
     }
   }
@@ -28,6 +31,10 @@ export function createGameState(): GameState {
     activeTool: null,
     sceneOffset: { x: 0, y: 0 },
     zoom: 1,
+    water: 5,
+    maxWater: 5,
+    coins: 0,
+    lastWaterRefill: Date.now(),
   };
 }
 
@@ -35,16 +42,61 @@ export function getPlotAt(state: GameState, x: number, y: number): Plot | undefi
   return state.plots.find(p => p.x === x && p.y === y);
 }
 
+export function consumeWater(state: GameState, amount: number): GameState {
+  if (state.water < amount) return state;
+  return { ...state, water: state.water - amount };
+}
+
+export function refillWater(state: GameState): GameState {
+  const now = Date.now();
+  const elapsedSeconds = (now - state.lastWaterRefill) / 1000;
+  const refillAmount = Math.floor(elapsedSeconds / 30);
+  if (refillAmount <= 0) return state;
+  const newWater = Math.min(state.maxWater, state.water + refillAmount);
+  return { ...state, water: newWater, lastWaterRefill: now };
+}
+
+export function addCoins(state: GameState, amount: number): GameState {
+  return { ...state, coins: state.coins + amount };
+}
+
+export function unlockPlot(state: GameState, plotId: string): GameState {
+  const plot = state.plots.find(p => p.id === plotId);
+  if (!plot || !plot.locked) return state;
+  const cost = plotUnlockCost(plot.x, plot.y);
+  if (state.coins < cost) return state;
+  const newPlots = state.plots.map(p => {
+    if (p.id !== plotId) return p;
+    return { ...p, locked: false };
+  });
+  return { ...state, plots: newPlots, coins: state.coins - cost };
+}
+
+function plotUnlockCost(x: number, y: number): number {
+  const distance = Math.max(x, y);
+  return distance * 10;
+}
+
 export function advancePlot(state: GameState, plotId: string, tool: string | null): GameState {
   const plot = state.plots.find(p => p.id === plotId);
-  if (!plot) return state;
+  if (!plot || plot.locked) return state;
 
   const nextState = computeNextState(plot.state, plot.flowerId, tool);
   if (nextState === plot.state) return state;
 
-  const newPlots = state.plots.map(p => {
-    if (p.id !== plotId) return p;
+  let newState = { ...state };
 
+  if (tool === 'water' && ['seed', 'sprout', 'growing'].includes(plot.state)) {
+    if (newState.water < 1) return state;
+    newState = { ...newState, water: newState.water - 1 };
+  }
+
+  if (tool === 'hoe' && plot.state === 'wild') {
+    newState = { ...newState, coins: newState.coins + 2 };
+  }
+
+  const newPlots = newState.plots.map(p => {
+    if (p.id !== plotId) return p;
     return {
       ...p,
       state: nextState,
@@ -52,7 +104,7 @@ export function advancePlot(state: GameState, plotId: string, tool: string | nul
     };
   });
 
-  return { ...state, plots: newPlots };
+  return { ...newState, plots: newPlots };
 }
 
 function computeNextState(
@@ -84,7 +136,7 @@ export function plantFlower(state: GameState, plotId: string, flowerId: string):
   const newPlots = state.plots.map(p => {
     if (p.id !== plotId) return p;
     if (p.state !== 'tilled') return p;
-    return { ...p, state: 'seed', flowerId, plantedAt: Date.now() };
+    return { ...p, state: 'seed' as PlotState, flowerId, plantedAt: Date.now() };
   });
 
   return { ...state, plots: newPlots, selectedFlowerId: null, activeTool: null };
@@ -94,19 +146,22 @@ export function witherPlot(state: GameState, plotId: string): GameState {
   const plot = state.plots.find(p => p.id === plotId);
   if (!plot || plot.state !== 'blooming') return state;
 
+  const flower = plot.flowerId ? FLOWER_MAP.get(plot.flowerId) : null;
+  const reward = flower?.bloomReward || 5;
+
   const newPlots = state.plots.map(p => {
     if (p.id !== plotId) return p;
     if (p.flowerId) {
       state.discoveredFlowers.add(p.flowerId);
     }
-    return { ...p, state: 'withered' };
+    return { ...p, state: 'withered' as PlotState };
   });
 
-  return { ...state, plots: newPlots };
+  return { ...state, plots: newPlots, coins: state.coins + reward };
 }
 
 export function setTool(state: GameState, tool: string | null): GameState {
-  return { ...state, activeTool: tool };
+  return { ...state, activeTool: tool as Tool | null };
 }
 
 export function selectFlower(state: GameState, flowerId: string | null): GameState {
