@@ -333,6 +333,35 @@ function setupDrag(
   let offsetX = state.sceneOffset.x;
   let offsetY = state.sceneOffset.y;
 
+  function startDrag(clientX: number, clientY: number) {
+    if ((event?.target as HTMLElement)?.closest('.plot')) return;
+    dragging = true;
+    startX = clientX;
+    startY = clientY;
+    offsetX = state.sceneOffset.x;
+    offsetY = state.sceneOffset.y;
+    viewport.style.cursor = 'grabbing';
+  }
+
+  function moveDrag(clientX: number, clientY: number) {
+    if (!dragging) return;
+    const dx = clientX - startX;
+    const dy = clientY - startY;
+    scene.style.transform = `translate(${offsetX + dx}px, ${offsetY + dy}px) scale(${state.zoom})`;
+  }
+
+  function endDrag(clientX: number, clientY: number) {
+    if (!dragging) return;
+    dragging = false;
+    viewport.style.cursor = 'grab';
+    const dx = clientX - startX;
+    const dy = clientY - startY;
+    onChange({
+      ...state,
+      sceneOffset: { x: offsetX + dx, y: offsetY + dy },
+    });
+  }
+
   viewport.addEventListener('mousedown', (e) => {
     if ((e.target as HTMLElement).closest('.plot')) return;
     dragging = true;
@@ -356,6 +385,39 @@ function setupDrag(
     viewport.style.cursor = 'grab';
     const dx = e.clientX - startX;
     const dy = e.clientY - startY;
+    onChange({
+      ...state,
+      sceneOffset: { x: offsetX + dx, y: offsetY + dy },
+    });
+  });
+
+  viewport.addEventListener('touchstart', (e) => {
+    if ((e.target as HTMLElement).closest('.plot')) return;
+    const touch = e.touches[0];
+    dragging = true;
+    startX = touch.clientX;
+    startY = touch.clientY;
+    offsetX = state.sceneOffset.x;
+    offsetY = state.sceneOffset.y;
+    viewport.style.cursor = 'grabbing';
+  }, { passive: false });
+
+  viewport.addEventListener('touchmove', (e) => {
+    if (!dragging) return;
+    e.preventDefault();
+    const touch = e.touches[0];
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
+    scene.style.transform = `translate(${offsetX + dx}px, ${offsetY + dy}px) scale(${state.zoom})`;
+  }, { passive: false });
+
+  viewport.addEventListener('touchend', (e) => {
+    if (!dragging) return;
+    dragging = false;
+    viewport.style.cursor = 'grab';
+    const touch = e.changedTouches[0];
+    const dx = touch.clientX - startX;
+    const dy = touch.clientY - startY;
     onChange({
       ...state,
       sceneOffset: { x: offsetX + dx, y: offsetY + dy },

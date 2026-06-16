@@ -409,9 +409,22 @@ html, body {
 
 /* Responsive */
 @media (max-width: 768px) {
-  .encyclopedia { width: 240px; right: 8px; top: 8px; bottom: 8px; }
+  .encyclopedia { width: 200px; right: 8px; top: 8px; bottom: 8px; }
   .plot-grid { grid-template-columns: repeat(4, 72px); grid-template-rows: repeat(4, 72px); gap: 6px; padding: 24px; }
   .plot { width: 72px; height: 72px; font-size: 28px; }
-  .zoom-controls { right: 264px; bottom: 8px; }
+  .zoom-controls { right: 224px; bottom: 8px; }
   .toolbar { left: 8px; bottom: 8px; }
+  .toolbar-btn { width: 56px; height: 56px; font-size: 26px; }
+  .zoom-btn { width: 44px; height: 44px; font-size: 20px; }
+  .status-bar { left: 8px; top: 8px; }
+  .status-item { padding: 6px 10px; font-size: 16px; }
+  .bgm-btn { width: 44px; height: 44px; font-size: 20px; right: 8px; top: 8px; }
+}
+
+@media (max-width: 480px) {
+  .encyclopedia { width: 160px; }
+  .plot-grid { grid-template-columns: repeat(3, 68px); grid-template-rows: repeat(3, 68px); gap: 4px; padding: 16px; }
+  .plot { width: 68px; height: 68px; font-size: 24px; }
+  .toolbar-btn { width: 48px; height: 48px; font-size: 22px; }
+  .zoom-btn { width: 40px; height: 40px; font-size: 18px; }
 }
