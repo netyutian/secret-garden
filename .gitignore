@@ -1,8 +1,0 @@
-dist/
-node_modules/
-*.log
-.DS_Store
-.playwright-mcp/
-page-snapshot.md
-page-initial.yml
-screenshot-*.png
