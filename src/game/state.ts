@@ -1,4 +1,4 @@
-import { GameState, Plot, PlotState, Tool } from './types';
+import { GameState, Plot, PlotState } from './types';
 import { FLOWER_MAP } from '../data/flowers';
 
 const COLS = 6;
@@ -28,7 +28,6 @@ export function createGameState(): GameState {
     plots: createPlots(),
     discoveredFlowers: new Set(),
     selectedFlowerId: null,
-    activeTool: null,
     water: 20,
     maxWater: 20,
     coins: 0,
@@ -134,7 +133,7 @@ export function plantFlower(state: GameState, plotId: string, flowerId: string):
     return { ...p, state: 'seed' as PlotState, flowerId, plantedAt: Date.now() };
   });
 
-  return { ...state, plots: newPlots, selectedFlowerId: null, activeTool: null };
+  return { ...state, plots: newPlots, selectedFlowerId: null };
 }
 
 export function witherPlot(state: GameState, plotId: string): GameState {
@@ -159,37 +158,8 @@ export function setEncyclopediaOpen(state: GameState, open: boolean): GameState 
   return { ...state, encyclopediaOpen: open };
 }
 
-export function setTool(state: GameState, tool: string | null): GameState {
-  return { ...state, activeTool: tool as Tool | null };
-}
-
 export function selectFlower(state: GameState, flowerId: string | null): GameState {
-  return { ...state, selectedFlowerId: flowerId, activeTool: flowerId ? 'seed' : null };
-}
-
-export function getAvailableActions(plot: Plot, activeTool: string | null): string[] {
-  const actions: string[] = [];
-  switch (plot.state) {
-    case 'wild':
-      actions.push('开荒');
-      break;
-    case 'tilled':
-      actions.push('播种');
-      break;
-    case 'seed':
-    case 'sprout':
-    case 'growing':
-      actions.push('浇水');
-      break;
-    case 'blooming':
-      actions.push('凋谢');
-      actions.push('铲除');
-      break;
-    case 'withered':
-      actions.push('铲除');
-      break;
-  }
-  return actions;
+  return { ...state, selectedFlowerId: flowerId };
 }
 
 export function getStateLabel(state: PlotState): string {

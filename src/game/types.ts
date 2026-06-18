@@ -32,12 +32,9 @@ export interface GameState {
   plots: Plot[];
   discoveredFlowers: Set<string>;
   selectedFlowerId: string | null;
-  activeTool: Tool | null;
   water: number;
   maxWater: number;
   coins: number;
   lastWaterRefill: number;
   encyclopediaOpen: boolean;
 }
-
-export type Tool = 'hoe' | 'water' | 'seed' | 'shovel' | 'hand';
