@@ -204,3 +204,43 @@ export function getStateLabel(state: PlotState): string {
   };
   return labels[state];
 }
+
+export function getDefaultAction(plot: Plot): 'hoe' | 'water' | 'wither' | 'shovel' | 'seed' | null {
+  if (plot.locked) return null;
+  switch (plot.state) {
+    case 'wild':
+      return 'hoe';
+    case 'tilled':
+      return 'seed';
+    case 'seed':
+    case 'sprout':
+    case 'growing':
+      return 'water';
+    case 'blooming':
+      return 'wither';
+    case 'withered':
+      return 'shovel';
+    default:
+      return null;
+  }
+}
+
+export function getActionLabel(plot: Plot): string {
+  if (plot.locked) return '解锁';
+  switch (plot.state) {
+    case 'wild':
+      return '开荒';
+    case 'tilled':
+      return '播种';
+    case 'seed':
+    case 'sprout':
+    case 'growing':
+      return '浇水';
+    case 'blooming':
+      return '凋谢';
+    case 'withered':
+      return '铲除';
+    default:
+      return getStateLabel(plot.state);
+  }
+}
