@@ -1,4 +1,4 @@
-import { createGameState, refillWater, setEncyclopediaOpen } from './game/state';
+import { createGameState, setEncyclopediaOpen } from './game/state';
 import { GameState } from './game/types';
 import { renderGarden, updateGarden } from './ui/garden-view';
 import { renderEncyclopedia, updateEncyclopedia } from './ui/encyclopedia';
@@ -57,11 +57,3 @@ function handleChange(next: GameState) {
   toolbar = updateToolbar(toolbar, state, handleChange);
   statusBar = updateStatusBar(statusBar, state);
 }
-
-// Auto-refill water every 30 seconds
-setInterval(() => {
-  const next = refillWater(state);
-  if (next !== state) {
-    handleChange(next);
-  }
-}, 5000);

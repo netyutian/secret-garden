@@ -29,10 +29,8 @@ export function createGameState(): GameState {
     discoveredFlowers: new Set(),
     selectedFlowerId: null,
     activeTool: null,
-    sceneOffset: { x: 0, y: 0 },
-    zoom: 1,
-    water: 5,
-    maxWater: 5,
+    water: 20,
+    maxWater: 20,
     coins: 0,
     lastWaterRefill: Date.now(),
     encyclopediaOpen: false,
@@ -49,12 +47,8 @@ export function consumeWater(state: GameState, amount: number): GameState {
 }
 
 export function refillWater(state: GameState): GameState {
-  const now = Date.now();
-  const elapsedSeconds = (now - state.lastWaterRefill) / 1000;
-  const refillAmount = Math.floor(elapsedSeconds / 30);
-  if (refillAmount <= 0) return state;
-  const newWater = Math.min(state.maxWater, state.water + refillAmount);
-  return { ...state, water: newWater, lastWaterRefill: now };
+  if (state.water >= state.maxWater) return state;
+  return { ...state, water: state.maxWater, lastWaterRefill: Date.now() };
 }
 
 export function addCoins(state: GameState, amount: number): GameState {
@@ -171,21 +165,6 @@ export function setTool(state: GameState, tool: string | null): GameState {
 
 export function selectFlower(state: GameState, flowerId: string | null): GameState {
   return { ...state, selectedFlowerId: flowerId, activeTool: flowerId ? 'seed' : null };
-}
-
-export function moveScene(state: GameState, dx: number, dy: number): GameState {
-  return {
-    ...state,
-    sceneOffset: {
-      x: state.sceneOffset.x + dx,
-      y: state.sceneOffset.y + dy,
-    },
-  };
-}
-
-export function setZoom(state: GameState, zoom: number): GameState {
-  const clamped = Math.max(0.5, Math.min(2, zoom));
-  return { ...state, zoom: clamped };
 }
 
 export function getAvailableActions(plot: Plot, activeTool: string | null): string[] {

@@ -4,13 +4,28 @@ import { getStateLabel, advancePlot, plantFlower, witherPlot, getAvailableAction
 import { playClickSound, playWaterSound, playBloomSound, playUnlockSound, playErrorSound } from '../audio/sound';
 import { showToast } from './toast';
 
+// Long-lived viewport listeners (water source) are registered once in
+// renderGarden but need to act on the LATEST state, not the snapshot they
+// were registered with. Without this ref, a click on the water source could
+// commit a stale state and reset the garden.
+//
+// The garden is a singleton in this app, so a module-level ref is safe.
+let gardenState: GameState | null = null;
+function getGardenState(): GameState {
+  if (!gardenState) throw new Error('garden state accessed before init');
+  return gardenState;
+}
+
 export function renderGarden(state: GameState, onChange: (s: GameState) => void): HTMLElement {
+  gardenState = state;
+
   const viewport = document.createElement('div');
   viewport.className = 'garden-viewport';
+  viewport.classList.toggle('tool-water', state.activeTool === 'water');
 
   const scene = document.createElement('div');
   scene.className = 'garden-scene';
-  updateSceneTransform(scene, state);
+  updateSceneTransform(scene);
 
   const grid = document.createElement('div');
   grid.className = 'plot-grid';
@@ -18,58 +33,35 @@ export function renderGarden(state: GameState, onChange: (s: GameState) => void)
 
   scene.appendChild(grid);
 
-  const waterSource = document.createElement('div');
-  waterSource.className = 'water-source';
-  waterSource.textContent = '💧';
-  waterSource.title = '水源：点击补充水滴';
-  waterSource.addEventListener('click', (e) => {
-    e.stopPropagation();
-    const next = refillWater(state);
-    if (next.water === state.water) {
-      playErrorSound();
-      showToast('水源正在恢复中，请稍后再来');
-    } else {
-      playWaterSound();
-      onChange(next);
-      showToast(`水滴已补充至 ${next.water}/${next.maxWater}`);
-    }
-  });
-  scene.appendChild(waterSource);
-
   viewport.appendChild(scene);
 
-  const zoomControls = document.createElement('div');
-  zoomControls.className = 'zoom-controls';
-  const zoomIn = document.createElement('button');
-  zoomIn.className = 'zoom-btn';
-  zoomIn.textContent = '+';
-  zoomIn.title = '放大';
-  zoomIn.addEventListener('click', (e) => {
+  // Water source lives on the viewport (not the scene) so it never
+  // participates in garden clicks.
+  const waterSource = document.createElement('div');
+  waterSource.className = 'water-source';
+  waterSource.innerHTML = '<span class="water-drop">💧</span><span class="water-ripple"></span><span class="water-ripple delay"></span>';
+  waterSource.title = '水源：点击补满水滴（无限续杯）';
+  waterSource.addEventListener('mousedown', (e) => e.stopPropagation());
+  waterSource.addEventListener('touchstart', (e) => e.stopPropagation(), { passive: true });
+  waterSource.addEventListener('click', (e) => {
     e.stopPropagation();
-    playClickSound();
-    onChange({ ...state, zoom: Math.max(0.5, Math.min(2, state.zoom + 0.2)) });
+    const cur = getGardenState();
+    const next = refillWater(cur);
+    playWaterSound();
+    if (next === cur) {
+      showToast(`水滴已满 ${cur.water}/${cur.maxWater}`);
+    } else {
+      onChange(next);
+      showToast(`水滴已补满 ${next.water}/${next.maxWater}`);
+    }
   });
-  const zoomOut = document.createElement('button');
-  zoomOut.className = 'zoom-btn';
-  zoomOut.textContent = '-';
-  zoomOut.title = '缩小';
-  zoomOut.addEventListener('click', (e) => {
-    e.stopPropagation();
-    playClickSound();
-    onChange({ ...state, zoom: Math.max(0.5, Math.min(2, state.zoom - 0.2)) });
-  });
-  zoomControls.appendChild(zoomIn);
-  zoomControls.appendChild(zoomOut);
-  viewport.appendChild(zoomControls);
-
-  setupDrag(viewport, scene, state, onChange);
-  setupZoom(viewport, state, onChange);
+  viewport.appendChild(waterSource);
 
   return viewport;
 }
 
-function updateSceneTransform(scene: HTMLElement, state: GameState) {
-  scene.style.transform = `translate(${state.sceneOffset.x}px, ${state.sceneOffset.y}px) scale(${state.zoom})`;
+function updateSceneTransform(scene: HTMLElement) {
+  scene.style.transform = 'translate(-50%, -50%)';
 }
 
 function renderPlots(
@@ -78,13 +70,43 @@ function renderPlots(
   onChange: (s: GameState) => void,
   viewport: HTMLElement
 ) {
-  grid.innerHTML = '';
+  // Index existing elements so we only touch plots that changed. The DOM
+  // order is preserved by appending each element (new or reused) into a
+  // fragment and then into the grid.
+  const existingById = new Map<string, HTMLElement>();
+  grid.querySelectorAll('.plot').forEach(node => {
+    const el = node as HTMLElement;
+    const id = el.dataset.id;
+    if (id) existingById.set(id, el);
+  });
+
+  const fragment = document.createDocumentFragment();
 
   state.plots.forEach(plot => {
-    const el = document.createElement('div');
+    let el = existingById.get(plot.id);
+    const needsRebuild = !el ||
+      el.dataset.state !== plot.state ||
+      el.dataset.flowerId !== (plot.flowerId || '') ||
+      el.dataset.locked !== String(plot.locked);
+
+    if (!needsRebuild) {
+      fragment.appendChild(el!);
+      return;
+    }
+
+    const wasBlooming = el?.dataset.state === 'blooming';
+    const isBlooming = plot.state === 'blooming';
+    const justBloomed = isBlooming && !wasBlooming;
+
+    if (el) el.remove();
+
+    el = document.createElement('div');
     el.className = `plot ${plot.state}`;
     if (plot.locked) el.classList.add('locked');
     el.dataset.id = plot.id;
+    el.dataset.state = plot.state;
+    el.dataset.flowerId = plot.flowerId || '';
+    el.dataset.locked = String(plot.locked);
 
     if (plot.locked) {
       el.textContent = '🔒';
@@ -95,38 +117,113 @@ function renderPlots(
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         playClickSound();
-        handleLockedPlotClick(plot, state, onChange, el, viewport);
+        handleLockedPlotClick(plot.id, onChange, el!, viewport);
       });
-      grid.appendChild(el);
-      return;
+    } else {
+      const flower = plot.flowerId ? FLOWER_MAP.get(plot.flowerId) : null;
+      renderPlotContent(el, plot, flower);
+
+      const label = document.createElement('span');
+      label.className = 'plot-label';
+      label.textContent = flower ? flower.name : getStateLabel(plot.state);
+      el.appendChild(label);
+
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        playClickSound();
+        handlePlotClick(plot.id, onChange, el!, viewport);
+      });
+
+      // Only the plot that transitions into blooming should play the big
+      // entrance pop. Re-rendering an already-blooming plot does NOT replay it.
+      if (justBloomed) {
+        const bloom = el.querySelector('.flora-bloom') as HTMLElement | null;
+        if (bloom) {
+          bloom.classList.add('just-bloomed');
+          bloom.addEventListener('animationend', () => {
+            bloom.classList.remove('just-bloomed');
+          }, { once: true });
+        }
+      }
     }
 
-    const flower = plot.flowerId ? FLOWER_MAP.get(plot.flowerId) : null;
-    const emoji = flower?.stageEmojis[plot.state] || '';
-    el.textContent = emoji;
-
-    const label = document.createElement('span');
-    label.className = 'plot-label';
-    label.textContent = flower ? flower.name : getStateLabel(plot.state);
-    el.appendChild(label);
-
-    el.addEventListener('click', (e) => {
-      e.stopPropagation();
-      playClickSound();
-      handlePlotClick(plot, state, onChange, el, viewport);
-    });
-
-    grid.appendChild(el);
+    fragment.appendChild(el);
   });
+
+  // Clean up any plot elements that no longer exist in state (defensive).
+  existingById.forEach((el, id) => {
+    if (!state.plots.find(p => p.id === id)) el.remove();
+  });
+
+  grid.appendChild(fragment);
+}
+
+// Render the visual content of a non-locked plot. Growing/blooming plots
+// build a tall stacked stem + bloom that escapes the plot box upward.
+function renderPlotContent(el: HTMLElement, plot: Plot, flower: ReturnType<typeof FLOWER_MAP.get> | null) {
+  const stage = plot.state;
+  const bloom = flower?.stageEmojis.blooming || flower?.emoji || '🌸';
+
+  if (stage === 'sprout') {
+    const stack = document.createElement('div');
+    stack.className = 'flora-stack sprout-stack';
+    stack.innerHTML = '<span class="flora-leaf">🌱</span>';
+    el.appendChild(stack);
+    return;
+  }
+
+  if (stage === 'growing') {
+    const stack = document.createElement('div');
+    stack.className = 'flora-stack growing-stack';
+    stack.innerHTML = `
+      <span class="flora-bud">🌿</span>
+      <span class="flora-stem">🌿</span>
+      <span class="flora-stem">🌱</span>
+    `;
+    el.appendChild(stack);
+    return;
+  }
+
+  if (stage === 'blooming') {
+    const stack = document.createElement('div');
+    stack.className = 'flora-stack blooming-stack';
+    stack.innerHTML = `
+      <span class="flora-bloom">${bloom}</span>
+      <span class="flora-stem tall">🌿</span>
+      <span class="flora-stem">🌿</span>
+    `;
+    const aura = document.createElement('span');
+    aura.className = 'bloom-aura';
+    el.appendChild(aura);
+    el.appendChild(stack);
+    for (let i = 0; i < 6; i++) {
+      const sp = document.createElement('span');
+      sp.className = `bloom-sparkle s${i}`;
+      sp.textContent = i % 2 === 0 ? '✨' : '·';
+      el.appendChild(sp);
+    }
+    return;
+  }
+
+  if (stage === 'withered') {
+    el.textContent = '🥀';
+    return;
+  }
+
+  // wild / tilled / seed: just the stage emoji (or empty)
+  el.textContent = flower?.stageEmojis[stage] || '';
 }
 
 function handleLockedPlotClick(
-  plot: Plot,
-  state: GameState,
+  plotId: string,
   onChange: (s: GameState) => void,
   el: HTMLElement,
   viewport: HTMLElement
 ) {
+  const state = getGardenState();
+  const plot = state.plots.find(p => p.id === plotId);
+  if (!plot || !plot.locked) return;
+
   const existingMenu = viewport.querySelector('.plot-menu');
   if (existingMenu) existingMenu.remove();
 
@@ -152,6 +249,7 @@ function handleLockedPlotClick(
   });
 
   viewport.appendChild(menu);
+  clampMenuToViewport(menu, viewport);
   const closeHandler = (e: MouseEvent) => {
     if (!menu.contains(e.target as Node)) {
       menu.remove();
@@ -162,12 +260,15 @@ function handleLockedPlotClick(
 }
 
 function handlePlotClick(
-  plot: Plot,
-  state: GameState,
+  plotId: string,
   onChange: (s: GameState) => void,
   el: HTMLElement,
   viewport: HTMLElement
 ) {
+  const state = getGardenState();
+  const plot = state.plots.find(p => p.id === plotId);
+  if (!plot) return;
+
   const existingMenu = viewport.querySelector('.plot-menu');
   if (existingMenu) existingMenu.remove();
 
@@ -278,6 +379,7 @@ function showMenu(
   }
 
   viewport.appendChild(menu);
+  clampMenuToViewport(menu, viewport);
 
   const closeHandler = (e: MouseEvent) => {
     if (!menu.contains(e.target as Node)) {
@@ -286,6 +388,20 @@ function showMenu(
     }
   };
   setTimeout(() => viewport.addEventListener('click', closeHandler), 0);
+}
+
+// Keep popup menus inside the viewport — without this, plots near the
+// right or bottom edge open menus that get clipped.
+function clampMenuToViewport(menu: HTMLElement, viewport: HTMLElement) {
+  const mr = menu.getBoundingClientRect();
+  const vr = viewport.getBoundingClientRect();
+  const margin = 8;
+  let left = mr.left - vr.left;
+  let top = mr.top - vr.top;
+  left = Math.max(margin, Math.min(left, vr.width - mr.width - margin));
+  top = Math.max(margin, Math.min(top, vr.height - mr.height - margin));
+  menu.style.left = `${left}px`;
+  menu.style.top = `${top}px`;
 }
 
 function addBtn(menu: HTMLElement, icon: string, text: string, onClick: () => void) {
@@ -319,128 +435,19 @@ function showSeedSelector(
     });
     menu.appendChild(row);
   });
+  // The seed list is taller than the original action menu — re-clamp so
+  // it stays inside the viewport after we've swapped contents.
+  const viewport = menu.parentElement;
+  if (viewport) clampMenuToViewport(menu, viewport as HTMLElement);
 }
 
-function setupDrag(
-  viewport: HTMLElement,
-  scene: HTMLElement,
-  state: GameState,
-  onChange: (s: GameState) => void
-) {
-  let dragging = false;
-  let startX = 0;
-  let startY = 0;
-  let offsetX = state.sceneOffset.x;
-  let offsetY = state.sceneOffset.y;
-
-  function startDrag(clientX: number, clientY: number) {
-    if ((event?.target as HTMLElement)?.closest('.plot')) return;
-    dragging = true;
-    startX = clientX;
-    startY = clientY;
-    offsetX = state.sceneOffset.x;
-    offsetY = state.sceneOffset.y;
-    viewport.style.cursor = 'grabbing';
-  }
-
-  function moveDrag(clientX: number, clientY: number) {
-    if (!dragging) return;
-    const dx = clientX - startX;
-    const dy = clientY - startY;
-    scene.style.transform = `translate(${offsetX + dx}px, ${offsetY + dy}px) scale(${state.zoom})`;
-  }
-
-  function endDrag(clientX: number, clientY: number) {
-    if (!dragging) return;
-    dragging = false;
-    viewport.style.cursor = 'grab';
-    const dx = clientX - startX;
-    const dy = clientY - startY;
-    onChange({
-      ...state,
-      sceneOffset: { x: offsetX + dx, y: offsetY + dy },
-    });
-  }
-
-  viewport.addEventListener('mousedown', (e) => {
-    if ((e.target as HTMLElement).closest('.plot')) return;
-    dragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    offsetX = state.sceneOffset.x;
-    offsetY = state.sceneOffset.y;
-    viewport.style.cursor = 'grabbing';
-  });
-
-  window.addEventListener('mousemove', (e) => {
-    if (!dragging) return;
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    scene.style.transform = `translate(${offsetX + dx}px, ${offsetY + dy}px) scale(${state.zoom})`;
-  });
-
-  window.addEventListener('mouseup', (e) => {
-    if (!dragging) return;
-    dragging = false;
-    viewport.style.cursor = 'grab';
-    const dx = e.clientX - startX;
-    const dy = e.clientY - startY;
-    onChange({
-      ...state,
-      sceneOffset: { x: offsetX + dx, y: offsetY + dy },
-    });
-  });
-
-  viewport.addEventListener('touchstart', (e) => {
-    if ((e.target as HTMLElement).closest('.plot')) return;
-    const touch = e.touches[0];
-    dragging = true;
-    startX = touch.clientX;
-    startY = touch.clientY;
-    offsetX = state.sceneOffset.x;
-    offsetY = state.sceneOffset.y;
-    viewport.style.cursor = 'grabbing';
-  }, { passive: false });
-
-  viewport.addEventListener('touchmove', (e) => {
-    if (!dragging) return;
-    e.preventDefault();
-    const touch = e.touches[0];
-    const dx = touch.clientX - startX;
-    const dy = touch.clientY - startY;
-    scene.style.transform = `translate(${offsetX + dx}px, ${offsetY + dy}px) scale(${state.zoom})`;
-  }, { passive: false });
-
-  viewport.addEventListener('touchend', (e) => {
-    if (!dragging) return;
-    dragging = false;
-    viewport.style.cursor = 'grab';
-    const touch = e.changedTouches[0];
-    const dx = touch.clientX - startX;
-    const dy = touch.clientY - startY;
-    onChange({
-      ...state,
-      sceneOffset: { x: offsetX + dx, y: offsetY + dy },
-    });
-  });
-}
-
-function setupZoom(
-  viewport: HTMLElement,
-  state: GameState,
-  onChange: (s: GameState) => void
-) {
-  viewport.addEventListener('wheel', (e) => {
-    e.preventDefault();
-    const delta = e.deltaY > 0 ? -0.1 : 0.1;
-    const newZoom = Math.max(0.5, Math.min(2, state.zoom + delta));
-    onChange({ ...state, zoom: newZoom });
-  }, { passive: false });
-}
 
 export function updateGarden(viewport: HTMLElement, state: GameState, onChange: (s: GameState) => void) {
+  gardenState = state;
+  viewport.classList.toggle('tool-water', state.activeTool === 'water');
+
   const scene = viewport.querySelector('.garden-scene') as HTMLElement;
-  if (scene) updateSceneTransform(scene, state);
+  if (scene) updateSceneTransform(scene);
 
   const grid = viewport.querySelector('.plot-grid') as HTMLElement;
   if (grid) renderPlots(grid, state, onChange, viewport);

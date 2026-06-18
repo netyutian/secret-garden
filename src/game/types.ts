@@ -33,8 +33,6 @@ export interface GameState {
   discoveredFlowers: Set<string>;
   selectedFlowerId: string | null;
   activeTool: Tool | null;
-  sceneOffset: { x: number; y: number };
-  zoom: number;
   water: number;
   maxWater: number;
   coins: number;
