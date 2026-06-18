@@ -1,6 +1,6 @@
 import { GameState, Plot } from '../game/types';
 import { FLOWER_MAP, FLOWERS } from '../data/flowers';
-import { getStateLabel, advancePlot, plantFlower, witherPlot, getAvailableActions, refillWater, unlockPlot } from '../game/state';
+import { getStateLabel, advancePlot, plantFlower, witherPlot, getDefaultAction, getActionLabel, refillWater, unlockPlot } from '../game/state';
 import { playClickSound, playWaterSound, playBloomSound, playUnlockSound, playErrorSound } from '../audio/sound';
 import { showToast } from './toast';
 
@@ -21,7 +21,6 @@ export function renderGarden(state: GameState, onChange: (s: GameState) => void)
 
   const viewport = document.createElement('div');
   viewport.className = 'garden-viewport';
-  viewport.classList.toggle('tool-water', state.activeTool === 'water');
 
   const scene = document.createElement('div');
   scene.className = 'garden-scene';
@@ -107,6 +106,7 @@ function renderPlots(
     el.dataset.state = plot.state;
     el.dataset.flowerId = plot.flowerId || '';
     el.dataset.locked = String(plot.locked);
+    el.title = getActionLabel(plot);
 
     if (plot.locked) {
       el.textContent = '🔒';
@@ -269,78 +269,20 @@ function handlePlotClick(
   const plot = state.plots.find(p => p.id === plotId);
   if (!plot) return;
 
+  // Close any open menu/seed selector.
   const existingMenu = viewport.querySelector('.plot-menu');
   if (existingMenu) existingMenu.remove();
 
-  if (state.activeTool === 'hoe' && plot.state === 'wild') {
-    playClickSound();
-    onChange(advancePlot(state, plot.id, 'hoe'));
-    showToast('已开荒');
-    return;
-  }
-  if (state.activeTool === 'water' && ['seed', 'sprout', 'growing'].includes(plot.state)) {
-    const next = advancePlot(state, plot.id, 'water');
-    if (next === state) {
-      playErrorSound();
-      showToast('水滴不足');
-    } else {
-      playWaterSound();
-      onChange(next);
-      showToast('浇水成功');
-    }
-    return;
-  }
-  if (state.activeTool === 'shovel' && ['blooming', 'withered'].includes(plot.state)) {
-    playClickSound();
-    onChange(advancePlot(state, plot.id, 'shovel'));
-    showToast('已铲除');
-    return;
-  }
-  if (state.activeTool === 'seed' && plot.state === 'tilled' && state.selectedFlowerId) {
-    playClickSound();
-    onChange(plantFlower(state, plot.id, state.selectedFlowerId));
-    showToast('播种完成');
-    return;
-  }
+  const action = getDefaultAction(plot);
 
-  showMenu(plot, state, onChange, el, viewport);
-}
-
-function showMenu(
-  plot: Plot,
-  state: GameState,
-  onChange: (s: GameState) => void,
-  el: HTMLElement,
-  viewport: HTMLElement
-) {
-  const menu = document.createElement('div');
-  menu.className = 'plot-menu';
-
-  const rect = el.getBoundingClientRect();
-  const viewportRect = viewport.getBoundingClientRect();
-  menu.style.left = `${rect.left - viewportRect.left + rect.width / 2 - 60}px`;
-  menu.style.top = `${rect.top - viewportRect.top - 10}px`;
-
-  const actions = getAvailableActions(plot, state.activeTool);
-
-  if (plot.state === 'wild') {
-    addBtn(menu, '⛏️', '开荒', () => {
+  switch (action) {
+    case 'hoe': {
       playClickSound();
       onChange(advancePlot(state, plot.id, 'hoe'));
       showToast('已开荒');
-      menu.remove();
-    });
-  }
-
-  if (plot.state === 'tilled') {
-    addBtn(menu, '🌱', '播种', () => {
-      playClickSound();
-      showSeedSelector(plot, state, onChange, menu);
-    });
-  }
-
-  if (['seed', 'sprout', 'growing'].includes(plot.state)) {
-    addBtn(menu, '💧', '浇水', () => {
+      return;
+    }
+    case 'water': {
       const next = advancePlot(state, plot.id, 'water');
       if (next === state) {
         playErrorSound();
@@ -350,44 +292,26 @@ function showMenu(
         onChange(next);
         showToast('浇水成功');
       }
-      menu.remove();
-    });
-  }
-
-  if (plot.state === 'blooming') {
-    addBtn(menu, '🍂', '凋谢', () => {
+      return;
+    }
+    case 'wither': {
       playBloomSound();
       onChange(witherPlot(state, plot.id));
       showToast('花已凋谢');
-      menu.remove();
-    });
-    addBtn(menu, '⛏️', '铲除', () => {
-      playClickSound();
-      onChange(advancePlot(state, plot.id, 'shovel'));
-      showToast('已铲除');
-      menu.remove();
-    });
-  }
-
-  if (plot.state === 'withered') {
-    addBtn(menu, '⛏️', '铲除', () => {
-      playClickSound();
-      onChange(advancePlot(state, plot.id, 'shovel'));
-      showToast('已铲除');
-      menu.remove();
-    });
-  }
-
-  viewport.appendChild(menu);
-  clampMenuToViewport(menu, viewport);
-
-  const closeHandler = (e: MouseEvent) => {
-    if (!menu.contains(e.target as Node)) {
-      menu.remove();
-      viewport.removeEventListener('click', closeHandler);
+      return;
     }
-  };
-  setTimeout(() => viewport.addEventListener('click', closeHandler), 0);
+    case 'shovel': {
+      playClickSound();
+      onChange(advancePlot(state, plot.id, 'shovel'));
+      showToast('已铲除');
+      return;
+    }
+    case 'seed': {
+      const menu = createPlotMenu(el, viewport);
+      showSeedSelector(plot, state, onChange, menu);
+      return;
+    }
+  }
 }
 
 // Keep popup menus inside the viewport — without this, plots near the
@@ -402,6 +326,29 @@ function clampMenuToViewport(menu: HTMLElement, viewport: HTMLElement) {
   top = Math.max(margin, Math.min(top, vr.height - mr.height - margin));
   menu.style.left = `${left}px`;
   menu.style.top = `${top}px`;
+}
+
+function createPlotMenu(el: HTMLElement, viewport: HTMLElement): HTMLElement {
+  const menu = document.createElement('div');
+  menu.className = 'plot-menu';
+
+  const rect = el.getBoundingClientRect();
+  const viewportRect = viewport.getBoundingClientRect();
+  menu.style.left = `${rect.left - viewportRect.left + rect.width / 2 - 60}px`;
+  menu.style.top = `${rect.top - viewportRect.top - 10}px`;
+
+  viewport.appendChild(menu);
+  clampMenuToViewport(menu, viewport);
+
+  const closeHandler = (e: MouseEvent) => {
+    if (!menu.contains(e.target as Node)) {
+      menu.remove();
+      viewport.removeEventListener('click', closeHandler);
+    }
+  };
+  setTimeout(() => viewport.addEventListener('click', closeHandler), 0);
+
+  return menu;
 }
 
 function addBtn(menu: HTMLElement, icon: string, text: string, onClick: () => void) {
@@ -444,7 +391,6 @@ function showSeedSelector(
 
 export function updateGarden(viewport: HTMLElement, state: GameState, onChange: (s: GameState) => void) {
   gardenState = state;
-  viewport.classList.toggle('tool-water', state.activeTool === 'water');
 
   const scene = viewport.querySelector('.garden-scene') as HTMLElement;
   if (scene) updateSceneTransform(scene);
