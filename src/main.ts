@@ -2,7 +2,6 @@ import { createGameState, setEncyclopediaOpen } from './game/state';
 import { GameState } from './game/types';
 import { renderGarden, updateGarden } from './ui/garden-view';
 import { renderEncyclopedia, updateEncyclopedia } from './ui/encyclopedia';
-import { renderToolbar, updateToolbar } from './ui/toolbar';
 import { renderStatusBar, updateStatusBar } from './ui/status-bar';
 import { startBGM, stopBGM, isPlayingBGM } from './audio/sound';
 
@@ -13,7 +12,6 @@ let state = createGameState();
 
 const gardenView = renderGarden(state, handleChange);
 let encyclopedia = renderEncyclopedia(state, handleChange);
-let toolbar = renderToolbar(state, handleChange);
 let statusBar = renderStatusBar(state);
 
 // Encyclopedia toggle button
@@ -47,13 +45,11 @@ app.appendChild(statusBar);
 app.appendChild(encyclopediaBtn);
 app.appendChild(gardenView);
 app.appendChild(encyclopedia);
-app.appendChild(toolbar);
 app.appendChild(bgmBtn);
 
 function handleChange(next: GameState) {
   state = next;
   updateGarden(gardenView, state, handleChange);
   encyclopedia = updateEncyclopedia(encyclopedia, state, handleChange);
-  toolbar = updateToolbar(toolbar, state, handleChange);
   statusBar = updateStatusBar(statusBar, state);
 }
